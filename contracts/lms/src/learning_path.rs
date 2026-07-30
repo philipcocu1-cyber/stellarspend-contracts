@@ -91,3 +91,50 @@ pub fn get_next_path_id(env: &Env) -> u64 {
         .get(&DataKey::LearningPathCount)
         .unwrap_or(1)
 }
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LearningPathProgress {
+    pub path_id: u64,
+    pub courses_completed: u32,
+    pub courses_remaining: u32,
+    pub completion_percentage: u32,
+}
+pub fn get_learning_path_progress(
+    env: &Env,
+    learner: Address,
+    path_id: u64,
+) -> Result<LearningPathProgress, Error> {
+    let path = get_learning_path(env, path_id)?;
+
+    let total_courses = path.courses.len();
+
+    if total_courses == 0 {
+        return Ok(LearningPathProgress {
+            path_id,
+            courses_completed: 0,
+            courses_remaining: 0,
+            completion_percentage: 0,
+        });
+    }
+
+    let mut courses_completed: u32 = 0;
+
+    for course_id in path.courses.iter() {
+        if has_completed_course(env, &learner, course_id) {
+            courses_completed += 1;
+        }
+    }
+
+    let total_courses = total_courses as u32;
+    let courses_remaining = total_courses - courses_completed;
+
+    let completion_percentage =
+        (courses_completed * 100) / total_courses;
+
+    Ok(LearningPathProgress {
+        path_id,
+        courses_completed,
+        courses_remaining,
+        completion_percentage,
+    })
+}
